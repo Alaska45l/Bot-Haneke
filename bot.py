@@ -31,7 +31,7 @@ except:
     peliculas_cola = []
 
 # ID del canal de voz específico
-channel_id = 1050768293901893764
+channel_id = 
 
 @bot.event
 async def on_ready():
