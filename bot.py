@@ -31,7 +31,7 @@ except:
     peliculas_cola = []
 
 # ID del canal de voz específico
-channel_id = 
+channel_id = 1050768293901893764
 
 @bot.event
 async def on_ready():
@@ -43,12 +43,13 @@ async def on_voice_state_update(member, before, after):
         # Comprueba si el miembro se une a un canal de voz específico
         if after.channel == bot.get_channel(channel_id) and before.channel != after.channel:
             # Asignar puntos al usuario si no está en el diccionario
-            if member not in user_points:
-                user_points[member] = 0
+            user_id = str(member.id)
+            if user_id not in user_points:
+                user_points[user_id] = 0
             while event_active:
                 await asyncio.sleep(60)
-                user_points[member] += 1
-                print(f'{member} has {user_points[member]} points.')
+                user_points[user_id] += 1
+                print(f'{member} has {user_points[user_id]} points.')
                 with open("user_points.json", "w") as f:
                     json.dump(user_points, f)
 
@@ -60,7 +61,7 @@ async def start_event(ctx):
         await ctx.send('Evento iniciado.')
     else:
         await ctx.send('Solo un administrador puede iniciar el evento.')
-        
+
 @bot.command()
 async def stop_event(ctx):
     if ctx.author.guild_permissions.administrator:
@@ -71,41 +72,49 @@ async def stop_event(ctx):
         await ctx.send('Solo un administrador puede detener el evento.')
 
 @bot.command()
-async def add_movie(ctx, movie_name: str = ""):
-    if movie_name == "":
+async def add_movie(ctx, *movie_name: str):
+    if not movie_name:
         await ctx.send("Necesitas propocionar el nombre de alguna pelicula.")
         return
-    global user_points
     member = ctx.author
+    user_id = str(member.id)
     cost = 300
-    if member in user_points and user_points[member] >= cost:
-        user_points[member] -= cost
+    if user_id in user_points and user_points[user_id] >= cost:
+        user_points[user_id] -= cost
+        movie_name = " ".join(movie_name)
         peliculas_cola.append(movie_name)
         peliculas_cola.sort()
-        await ctx.send(f'{movie_name} ha sido agregada a la cola de películas.')
-        await ctx.send(f'{member} ha gastado {cost} puntos y tiene {user_points[member]} puntos restantes.')
+        with open("user_points.json", "w") as f:
+            json.dump(user_points, f)
         with open("peliculas_cola.json", "w") as f:
             json.dump(peliculas_cola, f)
+        await ctx.send(f'{movie_name} ha sido agregada a la cola de películas.')
+        await ctx.send(f'{member} ha gastado {cost} puntos y tiene {user_points[user_id]} puntos restantes.')
     else:
-        await ctx.send(f'{member} no tiene suficientes puntos para agregar una película a la cola. Se necesitan {cost} puntos.')
+        await ctx.send(f'{member} no tiene suficientes puntos para agregar una pelicula. Necesitas {cost} puntos.')
 
 @bot.command()
 async def movie_queue(ctx):
-    if not peliculas_cola:
-        await ctx.send("La cola de peliculas esta vacia.")
-        return
-    message = "Cola de peliculas: \n"
-    for i, movie in enumerate(peliculas_cola):
-        message += f"{i+1}. {movie}\n"
-    await ctx.send(message)
+    try:
+        with open("peliculas_cola.json", "r") as f:
+            peliculas_cola = json.load(f)
+    except:
+        peliculas_cola = []
+    if len(peliculas_cola) > 0:
+        peliculas_cola_string = "\n".join(peliculas_cola)
+        await ctx.send(f'La cola de películas es: \n{peliculas_cola_string}')
+    else:
+        await ctx.send(f'La cola de películas está vacía.')
 
 @bot.command()
-async def points(ctx):
-    member = ctx.author
-    if member in user_points:
-        await ctx.send(f'{member} tiene {user_points[member]} puntos.')
+async def points(ctx,user:discord.Member=None):
+    if user is None:
+        user = ctx.author
+    user_id = str(user.id)
+    if user_id in user_points:
+        await ctx.send(f'{user} tiene {user_points[user_id]} puntos.')
     else:
-        await ctx.send(f'{member} no tiene puntos.')
+        await ctx.send(f'{user} no tiene puntos registrados.')
 
 
 # Iniciar el bot con la token de Discord
